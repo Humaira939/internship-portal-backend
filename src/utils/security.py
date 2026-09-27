@@ -1,34 +1,20 @@
 from datetime import datetime, timedelta, timezone
-import jwt
-from pwdlib import PasswordHash
+from jose import jwt
 
-# Password Hashing Setup (Argon2)
-pwd_context = PasswordHash.recommended()
+from src.utils.settings import settings
 
-# JWT Configuration
-SECRET_KEY = "YOUR_SUPER_SECRET_KEY_HERE"  # Production mein .env file se aayega
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 Hours TTL
+ACCESS_TOKEN_EXPIRE_MINUTES = 60  # Token will expire after 1 hour
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Plain password ko hashed password se verify karta hai."""
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password: str) -> str:
-    """Password ko Argon2 algorithim ke sath hash karta hai."""
-    return pwd_context.hash(password)
-
-
-def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    """Payload (user data + role) ko encode karke stateless JWT token banata hai."""
+def create_access_token(data: dict):
+    # Copy data so we don't modify the original dictionary
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
+    # Set token expiry time
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    # Create and return the signed JWT token
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

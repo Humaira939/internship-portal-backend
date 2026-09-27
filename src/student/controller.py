@@ -1,38 +1,45 @@
-from fastapi import HTTPException,status
+from sqlalchemy.orm import Session
+from fastapi import HTTPException
 from pwdlib import PasswordHash
-from sqlalchemy.orm import session
-from src.student.dto import StudentCreateDTO
-from src.student.model import StudentModel
 
-# Setup Argon2 password hasher using pwdlib
+from src.student.model import StudentModel
+from src.student.dto import StudentSignupRequest, StudentLoginRequest
+
+# Used to securely hash and verify passwords
 password_hash = PasswordHash.recommended()
 
-def create_student(body: StudentCreateDTO,db: session):
-    """Register a new student account in the portal."""
 
-    #Check if a student with the given email already exists
-    existing_student = (
-    db.query(StudentModel).filter(StudentModel.email == body.email).first() 
-    )
+def register_student(data: StudentSignupRequest, db: Session):
+    # Check if email is already registered
+    existing_student = db.query(StudentModel).filter(StudentModel.email == data.email).first()
     if existing_student:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="user with this email already exist")
-    
-    # Step 2: Hash the plain text password securely using Argon2
-    hashed_password =password_hash.hash(body.password)
+        raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Step 3: Create student record with default values for AI module compatibility
+    # Hash the password before saving (never save plain text password)
+    hashed_password = password_hash.hash(data.password)
+
+    # Create new student record
     new_student = StudentModel(
-        name = body.name,
-        email = body.email,
-        password_hash = hashed_password,
-        skills = [],         # Ensures empty array in DB for skill-overlap calculations
-        resume_path = None,  # Placeholder for future resume upload feature
+        name=data.name,
+        email=data.email,
+        password_hash=hashed_password
     )
 
-    # Step 4: Save record permanently into PostgreSQL database
-    db.add(new_student),
-    db.commit(),
+    db.add(new_student)
+    db.commit()
     db.refresh(new_student)
 
-    # Step 5: Return newly created student object
     return new_student
+
+
+def login_student(data: StudentLoginRequest, db: Session):
+    # Find student by email
+    student = db.query(StudentModel).filter(StudentModel.email == data.email).first()
+    if not student:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # Verify password against stored hash
+    if not password_hash.verify(data.password, student.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    return student
