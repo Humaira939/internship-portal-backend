@@ -1,59 +1,56 @@
-from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
-# ==========================================================
-# REQUEST SCHEMA: Data coming FROM frontend during Signup
-# ==========================================================
+# ============ REQUEST: registration form (every value arrives as text) ============
 class StudentSignupRequest(BaseModel):
-    name: str              # Matches frontend field: fullName
-    email: EmailStr        # Matches frontend field: email
-    password: str          # Matches frontend field: password
-    confirm_password: str  # Matches frontend field: confirmPassword
-
-    # Custom validation: password must be at least 6 characters
-    @field_validator("password")
-    @classmethod
-    def password_length(cls, value):
-        if len(value) < 6:
-            raise ValueError("Password must be at least 6 characters long")
-        return value
-
-    # Custom validation: password and confirm_password must match
-    @field_validator("confirm_password")
-    @classmethod
-    def passwords_match(cls, value, info):
-        if "password" in info.data and value != info.data["password"]:
-            raise ValueError("Passwords do not match")
-        return value
+    name: str = ""
+    email: str = ""
+    password: str = ""
+    phone: str = ""
+    university: str = ""
+    degree: str = ""
+    graduation_status: str = ""  # "yes" (graduated) or "no" (still studying)
+    semester: str = ""
+    graduation_year: str = ""
+    graduation_date: str = ""    # format YYYY-MM-DD
+    skills: str = ""             # comma separated, e.g. "Python, React"
+    location: str = ""
+    linkedin: str = ""
+    github: str = ""
+    portfolio: str = ""
 
 
-# ==========================================================
-# REQUEST SCHEMA: Data coming FROM frontend during Login
-# ==========================================================
+# ============ REQUEST: login ============
 class StudentLoginRequest(BaseModel):
-    email: EmailStr        # Matches frontend field: email
-    password: str          # Matches frontend field: password
+    email: str
+    password: str
 
 
-# ==========================================================
-# RESPONSE SCHEMA: Data sent BACK to frontend after Signup
-# Note: password_hash is NEVER included here (security)
-# ==========================================================
+# ============ RESPONSES (password_hash is never included) ============
 class StudentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
-    email: EmailStr
+    email: str
+    phone: Optional[str] = None
+    university: Optional[str] = None
+    degree: Optional[str] = None
+    graduation_status: Optional[str] = None
+    semester: Optional[str] = None
+    graduation_year: Optional[str] = None
+    graduation_date: Optional[datetime] = None
+    skills: Optional[list[str]] = None
+    location: Optional[str] = None
+    linkedin: Optional[str] = None
+    github: Optional[str] = None
+    portfolio: Optional[str] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True  # Allows conversion from SQLAlchemy model to this schema
 
-
-# ==========================================================
-# RESPONSE SCHEMA: Data sent BACK to frontend after Login
-# Includes a token so the frontend can stay "logged in"
-# ==========================================================
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

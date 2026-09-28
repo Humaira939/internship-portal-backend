@@ -1,65 +1,49 @@
-from pydantic import BaseModel, EmailStr, field_validator
-from datetime import datetime
+from datetime import date, datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
-# ==========================================================
-# REQUEST SCHEMA: Data coming FROM frontend during Signup
-# ==========================================================
+# ============ REQUEST: company registration form (every value arrives as text) ============
 class CompanySignupRequest(BaseModel):
-    company_name: str      # Matches frontend field: fullName
-    email: EmailStr        # Matches frontend field: email
-    password: str          # Matches frontend field: password
-    confirm_password: str  # Matches frontend field: confirmPassword
-
-    # Custom validation: password must be at least 6 characters
-    @field_validator("password")
-    @classmethod
-    def password_length(cls, value):
-        if len(value) < 6:
-            raise ValueError("Password must be at least 6 characters long")
-        return value
-
-    # Custom validation: password and confirm_password must match
-    @field_validator("confirm_password")
-    @classmethod
-    def passwords_match(cls, value, info):
-        if "password" in info.data and value != info.data["password"]:
-            raise ValueError("Passwords do not match")
-        return value
+    company_name: str = ""
+    email: str = ""
+    password: str = ""
+    industry: str = ""
+    contact_person: str = ""
+    phone: str = ""
+    location: str = ""
+    website: str = ""            # optional
+    description: str = ""        # optional
+    license_issue_date: str = ""   # format YYYY-MM-DD
+    license_expiry_date: str = ""  # format YYYY-MM-DD
 
 
-# ==========================================================
-# REQUEST SCHEMA: Data coming FROM frontend during Login
-# ==========================================================
+# ============ REQUEST: login ============
 class CompanyLoginRequest(BaseModel):
-    email: EmailStr        # Matches frontend field: email
-    password: str          # Matches frontend field: password
+    email: str
+    password: str
 
 
-# ==========================================================
-# RESPONSE SCHEMA: Data sent BACK to frontend after Signup
-# Note: password_hash is NEVER included here (security)
-# ==========================================================
+# ============ RESPONSES (password_hash and file path are never included) ============
 class CompanyResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     company_name: str
-    email: EmailStr
+    email: str
+    industry: Optional[str] = None
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    website: Optional[str] = None
+    description: Optional[str] = None
+    license_issue_date: Optional[date] = None
+    license_expiry_date: Optional[date] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True  # Allows conversion from SQLAlchemy model to this schema
 
-
-# ==========================================================
-# RESPONSE SCHEMA: Data sent BACK to frontend after Login
-# Includes a token so the frontend can stay "logged in"
-# ==========================================================
 class CompanyTokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     company: CompanyResponse
-
-
-
-    
-
