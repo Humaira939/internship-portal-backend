@@ -11,7 +11,14 @@ class Settings(BaseSettings):
     RESUME_BUCKET: str
     TRADE_LICENSE_BUCKET: str
 
-    model_config = SettingsConfigDict(env_file=".env")
+ # Forgot / Reset password
+    EMAIL_ADDRESS: str
+    EMAIL_APP_PASSWORD: str
+    FRONTEND_RESET_URL: str
+
+      
+
+    model_config = SettingsConfigDict(env_file=".env",extra="ignore")
 
 
 settings = Settings()

@@ -3,8 +3,17 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
-from src.student.controller import login_student, register_student
-from src.student.dto import StudentLoginRequest, StudentSignupRequest, TokenResponse
+from src.student.controller import (
+    login_student,
+    register_student,
+    request_student_password_reset,
+)
+from src.student.dto import (
+    ForgotPasswordRequest,
+    StudentLoginRequest,
+    StudentSignupRequest,
+    TokenResponse,
+)
 from src.utils.db import get_db
 from src.utils.security import create_access_token
 
@@ -49,3 +58,8 @@ def login(data: StudentLoginRequest, db: Session = Depends(get_db)):
     student = login_student(data, db)
     token = create_access_token({"sub": student.email, "role": "student"})
     return TokenResponse(access_token=token, student=student)
+
+
+@router.post("/forgot-password")
+def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    return request_student_password_reset(data.email, db)

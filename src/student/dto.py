@@ -29,6 +29,11 @@ class StudentLoginRequest(BaseModel):
     password: str
 
 
+# ============ REQUEST: forgot password ============
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
 # ============ RESPONSES (password_hash is never included) ============
 class StudentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

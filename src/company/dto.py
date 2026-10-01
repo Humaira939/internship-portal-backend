@@ -25,6 +25,11 @@ class CompanyLoginRequest(BaseModel):
     password: str
 
 
+# ============ REQUEST: forgot password ============
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
 # ============ RESPONSES (password_hash and file path are never included) ============
 class CompanyResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

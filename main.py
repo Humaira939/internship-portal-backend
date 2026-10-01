@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.utils.db import Base, engine
-from src.student.router import router as student_router
+from src.auth.router import router as auth_router
 from src.company.router import router as company_router
+from src.student.router import router as student_router
+from src.utils.db import Base, engine
 
 # Create all database tables (if they don't already exist)
 Base.metadata.create_all(bind=engine)
@@ -19,11 +20,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register student routes (signup, login)
+# Register routes
 app.include_router(student_router)
-
-# Register company routes (signup, login)
 app.include_router(company_router)
+app.include_router(auth_router)
 
 
 @app.get("/")

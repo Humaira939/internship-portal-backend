@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class LoginDTO(BaseModel):
@@ -12,4 +13,9 @@ class TokenResponseDTO(BaseModel):
     token_type: str= "bearer"
     role: str
     user_id: int
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
     

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from src.auth.dto import LoginDTO, TokenResponseDTO
 from src.student.model import StudentModel
 from src.company.model import CompanyModel
-from src.utils.security import create_access_token,verify_password
+from src.utils.security import create_access_token, verify_password
 
 def authenticate_user(db: Session, login_data: LoginDTO) -> TokenResponseDTO:
     """Authenticates student or company user credentials and returns a JWT access token."""

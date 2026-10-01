@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from src.company.dto import CompanyLoginRequest, CompanySignupRequest
 from src.company.model import CompanyModel
+from src.utils.email_sender import send_reset_email
+from src.utils.password_reset import create_reset_token
 from src.utils.settings import settings
 from src.utils.supabase_storage import delete_file, upload_trade_license
 
@@ -128,3 +130,18 @@ def login_company(data: CompanyLoginRequest, db: Session):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     return company
+
+
+def request_company_password_reset(email: str, db: Session):
+    email = email.strip().lower()
+    company = db.query(CompanyModel).filter(CompanyModel.email == email).first()
+
+    if company:
+        token = create_reset_token(company.email, "company")
+        reset_link = f"{settings.FRONTEND_RESET_URL}?token={token}"
+        try:
+            send_reset_email(company.email, reset_link)
+        except Exception as error:
+            print(f"Could not send reset email: {error}")
+
+    return {"message": "If this email is registered, a password reset link has been sent."}

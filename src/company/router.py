@@ -3,11 +3,16 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
-from src.company.controller import login_company, register_company
+from src.company.controller import (
+    login_company,
+    register_company,
+    request_company_password_reset,
+)
 from src.company.dto import (
     CompanyLoginRequest,
     CompanySignupRequest,
     CompanyTokenResponse,
+    ForgotPasswordRequest,
 )
 from src.utils.db import get_db
 from src.utils.security import create_access_token
@@ -48,3 +53,8 @@ def login(data: CompanyLoginRequest, db: Session = Depends(get_db)):
     company = login_company(data, db)
     token = create_access_token({"sub": company.email, "role": "company"})
     return CompanyTokenResponse(access_token=token, company=company)
+
+
+@router.post("/forgot-password")
+def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    return request_company_password_reset(data.email, db)
