@@ -14,7 +14,6 @@ password_hash = PasswordHash.recommended()
 
 @router.post("/reset-password")
 def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
-    # The token tells us WHO this is and WHICH table (student/company) to update
     email, role = verify_reset_token(data.token)
 
     if len(data.new_password) < 6:
