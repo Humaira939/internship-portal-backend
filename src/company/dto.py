@@ -45,6 +45,8 @@ class CompanyResponse(BaseModel):
     description: Optional[str] = None
     license_issue_date: Optional[date] = None
     license_expiry_date: Optional[date] = None
+    verification_status: str = "pending"      # pending / verified / rejected
+    rejection_reason: Optional[str] = None
     created_at: datetime
 
 

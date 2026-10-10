@@ -136,12 +136,15 @@ def request_company_password_reset(email: str, db: Session):
     email = email.strip().lower()
     company = db.query(CompanyModel).filter(CompanyModel.email == email).first()
 
-    if company:
-        token = create_reset_token(company.email, "company")
-        reset_link = f"{settings.FRONTEND_RESET_URL}?token={token}"
-        try:
-            send_reset_email(company.email, reset_link)
-        except Exception as error:
-            print(f"Could not send reset email: {error}")
+    # Supervisor's instruction: tell the user clearly if the email is not registered
+    if not company:
+        raise bad_request("This email is not registered.")
 
-    return {"message": "If this email is registered, a password reset link has been sent."}
+    token = create_reset_token(company.email, "company")
+    reset_link = f"{settings.FRONTEND_RESET_URL}?token={token}"
+    try:
+        send_reset_email(company.email, reset_link)
+    except Exception as error:
+        print(f"Could not send reset email: {error}")
+
+    return {"message": "A password reset link has been sent to your email."}

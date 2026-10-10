@@ -5,6 +5,7 @@ from src.auth.router import router as auth_router
 from src.company.router import router as company_router
 from src.student.router import router as student_router
 from src.utils.db import Base, engine
+from src.admin.router import router as admin_router
 
 # Create all database tables (if they don't already exist)
 Base.metadata.create_all(bind=engine)
@@ -24,6 +25,7 @@ app.add_middleware(
 app.include_router(student_router)
 app.include_router(company_router)
 app.include_router(auth_router)
+app.include_router(admin_router)
 
 
 @app.get("/")

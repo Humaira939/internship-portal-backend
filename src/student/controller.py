@@ -150,14 +150,15 @@ def request_student_password_reset(email: str, db: Session):
     email = email.strip().lower()
     student = db.query(StudentModel).filter(StudentModel.email == email).first()
 
-    if student:
-        token = create_reset_token(student.email, "student")
-        reset_link = f"{settings.FRONTEND_RESET_URL}?token={token}"
-        try:
-            send_reset_email(student.email, reset_link)
-        except Exception as error:
-            print(f"Could not send reset email: {error}")  # testing ke waqt error yahan dikhega
+    # Supervisor's instruction: tell the user clearly if the email is not registered
+    if not student:
+        raise bad_request("This email is not registered.")
 
-    # Same message chahe email registered ho ya na ho — taake koi pata na laga sake
-    # ke kaunsi emails system mein registered hain
-    return {"message": "If this email is registered, a password reset link has been sent."}
+    token = create_reset_token(student.email, "student")
+    reset_link = f"{settings.FRONTEND_RESET_URL}?token={token}"
+    try:
+        send_reset_email(student.email, reset_link)
+    except Exception as error:
+        print(f"Could not send reset email: {error}")  # testing ke waqt error yahan dikhega
+
+    return {"message": "A password reset link has been sent to your email."}

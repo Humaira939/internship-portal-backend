@@ -3,6 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
+from src.admin.model import AdminModel
 from src.company.model import CompanyModel
 from src.student.model import StudentModel
 from src.utils.db import get_db
@@ -47,3 +48,14 @@ def get_current_company(
     if not company:
         raise HTTPException(status_code=401, detail="Company not found")
     return company
+
+
+def get_current_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+):
+    email = _read_token(credentials, "admin")
+    admin = db.query(AdminModel).filter(AdminModel.email == email).first()
+    if not admin:
+        raise HTTPException(status_code=401, detail="Admin not found")
+    return admin
