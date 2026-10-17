@@ -7,14 +7,18 @@ from src.company.controller import (
     login_company,
     register_company,
     request_company_password_reset,
+    reupload_trade_license,
 )
 from src.company.dto import (
     CompanyLoginRequest,
+    CompanyResponse,
     CompanySignupRequest,
     CompanyTokenResponse,
     ForgotPasswordRequest,
 )
+from src.company.model import CompanyModel
 from src.utils.db import get_db
+from src.utils.deps import get_current_company
 from src.utils.security import create_access_token
 
 router = APIRouter(prefix="/company", tags=["Company"])
@@ -58,3 +62,23 @@ def login(data: CompanyLoginRequest, db: Session = Depends(get_db)):
 @router.post("/forgot-password")
 def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     return request_company_password_reset(data.email, db)
+
+
+# ---------- Needs a valid company token ----------
+@router.get("/me", response_model=CompanyResponse)
+def get_my_profile(company: CompanyModel = Depends(get_current_company)):
+    # The frontend calls this to show the latest verification status / rejection reason
+    return company
+
+
+@router.put("/reupload-license", response_model=CompanyResponse)
+def reupload_license(
+    license_issue_date: str = Form(""),
+    license_expiry_date: str = Form(""),
+    trade_license: Optional[UploadFile] = File(None),
+    company: CompanyModel = Depends(get_current_company),
+    db: Session = Depends(get_db),
+):
+    return reupload_trade_license(
+        company, trade_license, license_issue_date, license_expiry_date, db
+    )

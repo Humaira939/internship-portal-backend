@@ -248,3 +248,37 @@ def send_license_expired_email(to_email: str, company_name: str):
         ],
     )
     _send_email(to_email, "SmartIntern - Your trade license has expired", plain_body, html_body)
+
+# ======================================================================
+# TRADE LICENSE RE-UPLOAD REQUEST (sent by the admin's "Request re-upload" button)
+# ======================================================================
+def send_company_reupload_required_email(to_email: str, company_name: str, reason: str = ""):
+    reason = reason or "Your trade license could not be verified."
+
+    plain_body = (
+        f"Dear {company_name},\n\n"
+        "While reviewing your SmartIntern company account, we found a problem with your trade license.\n\n"
+        f"Reason: {reason}\n\n"
+        "Please log in and upload a valid, updated trade license. "
+        "Your account will be reviewed again after you upload it. "
+        "You will be able to post internships once it is verified.\n\n"
+        f"Log in here: {_login_url()}"
+    )
+    html_body = _html_wrapper(
+        title="Please upload your trade license again",
+        message_lines=[
+            f"Dear {escape(company_name)},",
+            "While reviewing your SmartIntern company account, we found a problem with your trade license.",
+            f"<b>Reason:</b> {escape(reason)}",
+            "Please log in and upload a valid, updated trade license. Your account will be reviewed again "
+            "after you upload it, and you will be able to post internships once it is verified.",
+        ],
+        button_text="Log in to SmartIntern",
+        button_link=_login_url(),
+    )
+    _send_email(
+        to_email,
+        "SmartIntern - Please upload your trade license again",
+        plain_body,
+        html_body,
+    )

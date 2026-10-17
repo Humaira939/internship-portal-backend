@@ -5,6 +5,15 @@ from sqlalchemy import Column, Date, DateTime, Integer, String
 from src.utils.db import Base
 
 
+class CompanyStatus:
+    """All possible verification statuses of a company (stored as text in the database)."""
+
+    PENDING = "pending"                      # new signup / license re-upload requested / re-uploaded -> waiting for admin
+    VERIFIED = "verified"                    # admin approved -> can post internships
+    REJECTED = "rejected"                    # admin rejected (with a reason)
+    BLOCKED = "blocked"                      # admin blocked -> cannot login or post
+
+
 class CompanyModel(Base):
     __tablename__ = "companies"
 
@@ -27,10 +36,8 @@ class CompanyModel(Base):
     license_issue_date = Column(Date, nullable=True)
     license_expiry_date = Column(Date, nullable=True)
 
-    # Admin verification (new): "pending" -> "verified" or "rejected"
+    # Admin verification: pending / verified / rejected / blocked
     # server_default makes the existing companies become "pending" automatically
     verification_status = Column(String, nullable=False, default="pending", server_default="pending")
     rejection_reason = Column(String, nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
-
-
