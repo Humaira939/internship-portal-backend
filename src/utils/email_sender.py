@@ -248,13 +248,13 @@ def send_license_expired_email(to_email: str, company_name: str):
         ],
     )
     _send_email(to_email, "SmartIntern - Your trade license has expired", plain_body, html_body)
-
+ 
 # ======================================================================
 # TRADE LICENSE RE-UPLOAD REQUEST (sent by the admin's "Request re-upload" button)
 # ======================================================================
 def send_company_reupload_required_email(to_email: str, company_name: str, reason: str = ""):
     reason = reason or "Your trade license could not be verified."
-
+ 
     plain_body = (
         f"Dear {company_name},\n\n"
         "While reviewing your SmartIntern company account, we found a problem with your trade license.\n\n"
@@ -282,3 +282,98 @@ def send_company_reupload_required_email(to_email: str, company_name: str, reaso
         plain_body,
         html_body,
     )
+ 
+ 
+# ======================================================================
+# LICENSE EXPIRY MILESTONE EMAILS (sent by the daily job: license_expiry/service.py)
+#   D-7, D-3, D0, +14, +25, FROZEN
+# ======================================================================
+def _days_text(number: int) -> str:
+    return f"{number} day" if number == 1 else f"{number} days"
+ 
+ 
+def _license_email_content(milestone: str, company_name: str, expiry_date, days_left: int):
+    """Returns (subject, title, lines, button_text). The numbers come from the real dates,
+    so a catch-up email after server downtime still says the correct number of days."""
+    from datetime import timedelta
+ 
+    from src.license_expiry.config import D_MINUS_3, D_MINUS_7, D_ZERO, FROZEN, GRACE_PERIOD_DAYS, PLUS_14, PLUS_25
+ 
+    expiry = expiry_date.strftime("%d %b %Y")
+    freeze_date = (expiry_date + timedelta(days=GRACE_PERIOD_DAYS)).strftime("%d %b %Y")
+    remaining = max(GRACE_PERIOD_DAYS + days_left, 0)   # days left before the account is frozen
+    hello = f"Hello {company_name},"
+ 
+    if milestone == D_MINUS_7:
+        return (
+            f"Your SmartIntern license expires in {_days_text(days_left)}",
+            "Your trade license expires soon",
+            [hello,
+             f"This is a reminder that your trade license on SmartIntern is set to expire on {expiry}. "
+             "Please upload your renewed license before then to keep your account active."],
+            "Update my license",
+        )
+    if milestone == D_MINUS_3:
+        return (
+            f"Reminder: your license expires in {_days_text(days_left)}",
+            "Your trade license expires very soon",
+            [hello,
+             f"Your license expires on {expiry}, just {_days_text(days_left)} from now. "
+             "Please upload the renewed copy as soon as possible so your account is not affected."],
+            "Update my license",
+        )
+    if milestone == D_ZERO:
+        expired_text = "Your trade license expired today." if days_left == 0 else f"Your trade license expired on {expiry}."
+        return (
+            f"Your license has expired: {_days_text(remaining)} to update",
+            "Your trade license has expired",
+            [hello,
+             f"{expired_text} You have {_days_text(remaining)}, until {freeze_date}, to upload a new valid license. "
+             "If we do not receive it by then, your account will be frozen and you will not be able to "
+             "post or manage internships."],
+            "Upload new license",
+        )
+    if milestone == PLUS_14:
+        return (
+            f"{_days_text(remaining)} left to update your license",
+            "Please update your trade license",
+            [hello,
+             f"Your license has expired and you have {_days_text(remaining)} remaining before your account "
+             f"is frozen on {freeze_date}. Please upload a valid license to avoid losing access."],
+            "Upload new license",
+        )
+    if milestone == PLUS_25:
+        return (
+            f"Final warning: account freezes in {_days_text(remaining)}",
+            "Final warning",
+            [hello,
+             f"This is a final reminder. Your account will be frozen on {freeze_date} unless you upload a "
+             "valid license. Frozen accounts cannot post or manage internships until a license is verified."],
+            "Upload new license",
+        )
+    if milestone == FROZEN:
+        return (
+            "Your SmartIntern account has been frozen",
+            "Your account has been frozen",
+            [hello,
+             f"We did not receive a valid license within the {GRACE_PERIOD_DAYS}-day grace period, so your "
+             "account has been frozen. Upload a valid license and our team will verify it and restore your access."],
+            "Upload license to restore access",
+        )
+    raise ValueError(f"Unknown license milestone: {milestone}")
+ 
+ 
+def send_license_milestone_email(to_email: str, company_name: str, milestone: str, expiry_date, days_left: int):
+    from src.license_expiry.config import FRONTEND_UPLOAD_URL
+ 
+    subject, title, lines, button_text = _license_email_content(milestone, company_name, expiry_date, days_left)
+ 
+    plain_body = "\n\n".join(lines) + f"\n\n{button_text}: {FRONTEND_UPLOAD_URL}"
+    html_body = _html_wrapper(
+        title=title,
+        message_lines=[escape(line) for line in lines],
+        button_text=button_text,
+        button_link=FRONTEND_UPLOAD_URL,
+    )
+    _send_email(to_email, f"SmartIntern - {subject}", plain_body, html_body)
+ 

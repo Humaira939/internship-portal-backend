@@ -1,9 +1,9 @@
 from datetime import date, datetime
 from typing import Optional
-
+ 
 from pydantic import BaseModel, ConfigDict
-
-
+ 
+ 
 # ============ REQUEST: company registration form (every value arrives as text) ============
 class CompanySignupRequest(BaseModel):
     company_name: str = ""
@@ -17,23 +17,23 @@ class CompanySignupRequest(BaseModel):
     description: str = ""        # optional
     license_issue_date: str = ""   # format YYYY-MM-DD
     license_expiry_date: str = ""  # format YYYY-MM-DD
-
-
+ 
+ 
 # ============ REQUEST: login ============
 class CompanyLoginRequest(BaseModel):
     email: str
     password: str
-
-
+ 
+ 
 # ============ REQUEST: forgot password ============
 class ForgotPasswordRequest(BaseModel):
     email: str
-
-
+ 
+ 
 # ============ RESPONSES (password_hash and file path are never included) ============
 class CompanyResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
+ 
     id: int
     company_name: str
     email: str
@@ -45,13 +45,16 @@ class CompanyResponse(BaseModel):
     description: Optional[str] = None
     license_issue_date: Optional[date] = None
     license_expiry_date: Optional[date] = None
-    # pending / verified / rejected / blocked
+    # pending / verified / rejected / blocked / frozen
     verification_status: str = "pending"
     rejection_reason: Optional[str] = None
+    license_days_left: Optional[int] = None   # negative = days since expiry
+    grace_ends_on: Optional[date] = None      # the day the account is frozen if no valid license
     created_at: datetime
-
-
+ 
+ 
 class CompanyTokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     company: CompanyResponse
+ 

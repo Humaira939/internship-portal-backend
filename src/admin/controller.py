@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from src.admin.dto import AdminLoginRequest
 from src.admin.model import AdminModel
 from src.company.model import CompanyModel, CompanyStatus
+from src.license_expiry.config import today_local
 from src.student.model import StudentModel
 from src.utils.email_sender import (
     send_company_rejected_email,
@@ -33,6 +34,7 @@ FILTER_STATUSES = (
     CompanyStatus.VERIFIED,
     CompanyStatus.REJECTED,
     CompanyStatus.BLOCKED,
+    CompanyStatus.FROZEN,
 )
  
 REASON_MIN_LENGTH = 5
@@ -75,8 +77,8 @@ def company_item(company: CompanyModel) -> dict:
  
     # Helps the admin screen: shows a warning badge without calculating dates in JavaScript
     expiry = company.license_expiry_date
-    license_expired = bool(expiry and expiry < date.today())
-    days_until_expiry = (expiry - date.today()).days if expiry else None
+    license_expired = bool(expiry and expiry < today_local())
+    days_until_expiry = (expiry - today_local()).days if expiry else None
  
     return {
         "id": company.id,
@@ -92,6 +94,7 @@ def company_item(company: CompanyModel) -> dict:
         "license_expiry_date": company.license_expiry_date,
         "license_expired": license_expired,
         "days_until_expiry": days_until_expiry,
+        "grace_ends_on": company.grace_ends_on,
         "verification_status": company.verification_status,
         "rejection_reason": company.rejection_reason,
         # True = the admin already asked this company for a new license and is waiting for it
@@ -239,7 +242,7 @@ def list_companies(db: Session, status: str = "all"):
         status = CompanyStatus.VERIFIED
     if status not in FILTER_STATUSES:
         raise bad_request(
-            "Status must be one of: all, pending, verified, rejected, blocked."
+            "Status must be one of: all, pending, verified, rejected, blocked, frozen."
         )
  
     query = db.query(CompanyModel)
@@ -261,6 +264,7 @@ def list_companies(db: Session, status: str = "all"):
             "pending": counts.get(CompanyStatus.PENDING, 0),
             "rejected": counts.get(CompanyStatus.REJECTED, 0),
             "blocked": counts.get(CompanyStatus.BLOCKED, 0),
+            "frozen": counts.get(CompanyStatus.FROZEN, 0),
         },
     }
  
@@ -293,6 +297,7 @@ def get_license_link(db: Session, company_id: int):
 #                          the company uploads a new license)
 #   rejected           -> verify (admin changed their mind) / block
 #   verified           -> request-reupload (goes back to pending) / reject / block
+#   frozen             -> reject / block (it must upload a new license first; then it is pending again)
 #   blocked            -> unblock only
 # ======================================================================
 def verify_company(db: Session, company_id: int):
@@ -303,6 +308,8 @@ def verify_company(db: Session, company_id: int):
         raise bad_request("This company is already verified.")
     if status == CompanyStatus.BLOCKED:
         raise bad_request("This company is blocked. Unblock it first.")
+    if status == CompanyStatus.FROZEN:
+        raise bad_request("This company is frozen. It must upload a new trade license first.")
     if status == CompanyStatus.PENDING and company.reviewed_at is not None:
         raise bad_request("Waiting for the company to upload a new trade license.")
     if not company.trade_license_path:
@@ -311,7 +318,7 @@ def verify_company(db: Session, company_id: int):
     # The core rule: a company with an expired license can never be verified.
     # The admin must write a reason and use "Request re-upload" (or "Reject") instead.
     expiry = company.license_expiry_date
-    if expiry is None or expiry < date.today():
+    if expiry is None or expiry < today_local():
         raise bad_request(
             "The trade license has expired, so this company cannot be verified. "
             "Write a reason and use 'Request re-upload' (or 'Reject')."
@@ -347,8 +354,8 @@ def request_license_reupload(db: Session, company_id: int, reason: str):
  
     if status == CompanyStatus.BLOCKED:
         raise bad_request("This company is blocked. Unblock it first.")
-    if status == CompanyStatus.REJECTED:
-        raise bad_request("This company is rejected. It can already upload a new license.")
+    if status in (CompanyStatus.REJECTED, CompanyStatus.FROZEN):
+        raise bad_request("This company can already upload a new license.")
     if status == CompanyStatus.PENDING and company.reviewed_at is not None:
         raise bad_request("A new trade license has already been requested from this company.")
  
