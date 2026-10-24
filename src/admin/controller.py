@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from src.admin.dto import AdminLoginRequest
 from src.admin.model import AdminModel
 from src.company.model import CompanyModel, CompanyStatus
+from src.internship.model import InternshipModel, InternshipStatus
 from src.license_expiry.config import today_local
 from src.student.model import StudentModel
 from src.utils.email_sender import (
@@ -72,7 +73,7 @@ def login_admin(data: AdminLoginRequest, db: Session):
 # ======================================================================
 # HELPERS: turn database rows into plain dictionaries for the frontend
 # ======================================================================
-def company_item(company: CompanyModel) -> dict:
+def company_item(company: CompanyModel, internships_count: int = 0) -> dict:
     year = company.created_at.year if company.created_at else utc_now().year
  
     # Helps the admin screen: shows a warning badge without calculating dates in JavaScript
@@ -102,7 +103,7 @@ def company_item(company: CompanyModel) -> dict:
             company.verification_status == CompanyStatus.PENDING and company.reviewed_at is not None
         ),
         "registration_ref": f"REG-{year}-{company.id:03d}",
-        "internships_count": 0,   # will be real once the internship module exists
+        "internships_count": internships_count,
         "applicants_count": 0,    # will be real once the application module exists
         "created_at": company.created_at,
         "reviewed_at": company.reviewed_at,
@@ -133,6 +134,14 @@ def student_item(student: StudentModel) -> dict:
         "status": "active",
         "created_at": student.created_at,
     }
+ 
+ 
+def count_internships(db: Session, company_id: int) -> int:
+    return (
+        db.query(func.count(InternshipModel.id))
+        .filter(InternshipModel.company_id == company_id)
+        .scalar() or 0
+    )
  
  
 def get_company_or_404(db: Session, company_id: int) -> CompanyModel:
@@ -175,6 +184,12 @@ def dashboard_data(db: Session):
         .filter(CompanyModel.verification_status == CompanyStatus.PENDING)
         .scalar() or 0
     )
+    total_internships = db.query(func.count(InternshipModel.id)).scalar() or 0
+    active_internships = (
+        db.query(func.count(InternshipModel.id))
+        .filter(InternshipModel.status == InternshipStatus.ACTIVE)
+        .scalar() or 0
+    )
     new_students = (
         db.query(func.count(StudentModel.id))
         .filter(StudentModel.created_at >= start)
@@ -199,7 +214,8 @@ def dashboard_data(db: Session):
             "students": total_students,
             "companies": total_companies,
             "pending_companies": pending_companies,
-            "internships": 0,     # internship module not built yet
+            "internships": total_internships,
+            "active_internships": active_internships,
             "applications": 0,    # application module not built yet
             "new_students_this_month": new_students,
             "new_companies_this_month": new_companies,
@@ -250,6 +266,12 @@ def list_companies(db: Session, status: str = "all"):
         query = query.filter(CompanyModel.verification_status == status)
     companies = query.order_by(CompanyModel.id.desc()).all()
  
+    internship_counts = dict(
+        db.query(InternshipModel.company_id, func.count(InternshipModel.id))
+        .group_by(InternshipModel.company_id)
+        .all()
+    )
+ 
     counts = dict(
         db.query(CompanyModel.verification_status, func.count(CompanyModel.id))
         .group_by(CompanyModel.verification_status)
@@ -257,7 +279,7 @@ def list_companies(db: Session, status: str = "all"):
     )
  
     return {
-        "companies": [company_item(c) for c in companies],
+        "companies": [company_item(c, internship_counts.get(c.id, 0)) for c in companies],
         "stats": {
             "total": sum(counts.values()),
             "verified": counts.get(CompanyStatus.VERIFIED, 0),
@@ -341,7 +363,7 @@ def verify_company(db: Session, company_id: int):
         "message": "Company verified successfully.",
         "verified": True,
         "email_sent": email_sent,
-        "company": company_item(company),
+        "company": company_item(company, count_internships(db, company.id)),
     }
  
  
@@ -375,7 +397,7 @@ def request_license_reupload(db: Session, company_id: int, reason: str):
     return {
         "message": "The company has been asked to upload a new trade license.",
         "email_sent": email_sent,
-        "company": company_item(company),
+        "company": company_item(company, count_internships(db, company.id)),
     }
  
  
@@ -406,7 +428,7 @@ def reject_company(db: Session, company_id: int, reason: str):
     return {
         "message": "Company rejected.",
         "email_sent": email_sent,
-        "company": company_item(company),
+        "company": company_item(company, count_internships(db, company.id)),
     }
  
  
@@ -421,7 +443,7 @@ def block_company(db: Session, company_id: int):
     company.reviewed_at = utc_now()
     save_company(db, company)
  
-    return {"message": "Company blocked.", "company": company_item(company)}
+    return {"message": "Company blocked.", "company": company_item(company, count_internships(db, company.id))}
  
  
 def unblock_company(db: Session, company_id: int):
@@ -435,5 +457,6 @@ def unblock_company(db: Session, company_id: int):
     company.reviewed_at = None
     save_company(db, company)
  
-    return {"message": "Company unblocked. It is waiting for verification again.", "company": company_item(company)}
+    return {"message": "Company unblocked. It is waiting for verification again.", "company": company_item(company, count_internships(db, company.id))}
+ 
  
