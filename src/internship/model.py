@@ -77,6 +77,9 @@ class InternshipModel(Base):
     )
     closed_at = Column(DateTime, nullable=True)
  
+    # The company that posted it (used by the student pages to show the company name and details)
+    company = relationship("CompanyModel")
+ 
     # Required skills (rows of the internship_skills table); deleted together with the internship
     skills = relationship(
         "InternshipSkillModel",

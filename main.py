@@ -9,10 +9,13 @@ from src.student.router import router as student_router
 from src.utils.db import Base, engine
 from src.admin.router import router as admin_router
 from src.internship.router import router as internship_router
+from src.internship.student_router import router as student_internship_router
+from src.application.router import router as application_router
  
 # The license reminder table must be imported BEFORE create_all, so that it gets created too
 from src.license_expiry.model import LicenseReminderLog  # noqa: F401
 from src.internship.model import InternshipModel, InternshipSkillModel  # noqa: F401
+from src.application.model import ApplicationModel  # noqa: F401
 from src.utils.scheduler import start_scheduler, stop_scheduler
  
 # Create all database tables (if they don't already exist)
@@ -45,6 +48,8 @@ app.include_router(company_router)
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(internship_router)
+app.include_router(student_internship_router)
+app.include_router(application_router)
  
  
 @app.get("/")

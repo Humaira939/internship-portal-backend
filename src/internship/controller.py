@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
  
+from src.application.model import ApplicationModel
 from src.company.model import CompanyModel
 from src.internship.dto import InternshipCreateRequest, InternshipUpdateRequest
 from src.internship.model import InternshipModel, InternshipSkillModel, InternshipStatus
@@ -37,9 +38,25 @@ def get_owned_internship(db: Session, company: CompanyModel, internship_id: int)
  
  
 def count_applicants(db: Session, internship_id: int) -> int:
-    # The applications module does not exist yet. When it is built, count the applications here:
-    #   return db.query(func.count(ApplicationModel.id)).filter(ApplicationModel.internship_id == internship_id).scalar()
-    return 0
+    return (
+        db.query(func.count(ApplicationModel.id))
+        .filter(ApplicationModel.internship_id == internship_id)
+        .scalar()
+        or 0
+    )
+ 
+ 
+def applicant_counts(db: Session, internship_ids) -> dict:
+    """{internship_id: number of applications} for many internships in ONE query."""
+    if not internship_ids:
+        return {}
+    rows = (
+        db.query(ApplicationModel.internship_id, func.count(ApplicationModel.id))
+        .filter(ApplicationModel.internship_id.in_(list(internship_ids)))
+        .group_by(ApplicationModel.internship_id)
+        .all()
+    )
+    return dict(rows)
  
  
 def is_duplicate(db, company_id, title, start_date, exclude_id=None) -> bool:
@@ -64,6 +81,7 @@ def save(db: Session, internship: InternshipModel, error_message: str):
         db.rollback()
         print(f"Internship save error: {error}")
         raise HTTPException(status_code=500, detail=error_message)
+    internship.applicants_count = count_applicants(db, internship.id)
     return internship
  
  
@@ -119,7 +137,11 @@ def list_internships(company: CompanyModel, db: Session):
         .all()
     )
  
-    applicants = sum(count_applicants(db, item.id) for item in internships)
+    counts = applicant_counts(db, [item.id for item in internships])
+    for item in internships:
+        item.applicants_count = counts.get(item.id, 0)      # shown on each card
+ 
+    applicants = sum(counts.values())
     stats = {
         "total": len(internships),
         "active": sum(1 for item in internships if item.status == InternshipStatus.ACTIVE),
@@ -134,7 +156,9 @@ def list_internships(company: CompanyModel, db: Session):
 # ONE INTERNSHIP  (GET /company/internships/{id})
 # ======================================================================
 def get_internship(internship_id: int, company: CompanyModel, db: Session):
-    return get_owned_internship(db, company, internship_id)
+    internship = get_owned_internship(db, company, internship_id)
+    internship.applicants_count = count_applicants(db, internship.id)
+    return internship
  
  
 # ======================================================================

@@ -9,3 +9,6 @@ pydantic-settings
 joblib
 apscheduler
 tzdata
+supabase
+pg8000
+pwdlib
