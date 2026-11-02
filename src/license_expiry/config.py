@@ -12,7 +12,7 @@ from src.utils.settings import settings
 TIMEZONE = getattr(settings, "LICENSE_TIMEZONE", "Asia/Karachi")
 GRACE_PERIOD_DAYS = int(getattr(settings, "GRACE_PERIOD_DAYS", 28))
 FRONTEND_UPLOAD_URL = getattr(
-    settings, "FRONTEND_UPLOAD_URL", "http://127.0.0.1:5500/html/company-profile.html"
+    settings, "FRONTEND_UPLOAD_URL", "http://127.0.0.1:8000/company-profile"
 )
 CHECK_ON_STARTUP = bool(getattr(settings, "LICENSE_CHECK_ON_STARTUP", True))
  
@@ -31,4 +31,5 @@ FROZEN = "FROZEN"
 def today_local() -> date:
     """'Today' in the one configured timezone, so every part of the project agrees on the date."""
     return datetime.now(ZoneInfo(TIMEZONE)).date()
+ 
  

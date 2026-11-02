@@ -11,6 +11,7 @@ from src.admin.router import router as admin_router
 from src.internship.router import router as internship_router
 from src.internship.student_router import router as student_internship_router
 from src.application.router import router as application_router
+from src.pages.router import setup_frontend
  
 # The license reminder table must be imported BEFORE create_all, so that it gets created too
 from src.license_expiry.model import LicenseReminderLog  # noqa: F401
@@ -52,7 +53,13 @@ app.include_router(student_internship_router)
 app.include_router(application_router)
  
  
-@app.get("/")
-def root():
+@app.get("/health")
+def health():
+    # (the old "/" check moved here: "/" is now the home page)
     return {"message": "SmartIntern API is running"}
+ 
+ 
+# The frontend pages (/, /login, ...) and the /css, /js, /images folders.
+# This must stay LAST, after all the API routers.
+setup_frontend(app)
  

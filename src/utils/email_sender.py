@@ -12,10 +12,14 @@ from src.utils.settings import settings
 LOGO_PATH = Path(__file__).resolve().parent.parent.parent / "assets" / "smartintern-logo.png"
  
  
+def _site_url(path: str) -> str:
+    """A link to a page of the site, for example _site_url("/login") -> http://127.0.0.1:8000/login"""
+    base = getattr(settings, "FRONTEND_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+    return f"{base}{path}"
+ 
+ 
 def _login_url() -> str:
-    # Built from FRONTEND_RESET_URL: .../html/reset-password.html -> .../html/login.html
-    base = settings.FRONTEND_RESET_URL.rsplit("/", 1)[0]
-    return f"{base}/login.html"
+    return _site_url("/login")
  
  
 def _send_email(to_email: str, subject: str, plain_body: str, html_body: str):
@@ -388,8 +392,7 @@ def send_new_applicant_email(
     internship_title: str,
     university: str = None,
 ):
-    # .../html/reset-password.html -> .../html/view-applicants.html
-    applicants_url = settings.FRONTEND_RESET_URL.rsplit("/", 1)[0] + "/view-applicants.html"
+    applicants_url = _site_url("/view-applicants")
  
     who = f"{student_name} ({university})" if university else student_name
     plain_body = (

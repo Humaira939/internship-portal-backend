@@ -12,3 +12,5 @@ tzdata
 supabase
 pg8000
 pwdlib
+jinja2 
+aiofiles
