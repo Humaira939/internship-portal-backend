@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     FRONTEND_UPLOAD_URL: str = "http://127.0.0.1:8000/company-profile"  # button link in reminder emails
     LICENSE_CHECK_ON_STARTUP: bool = True           # run one check when the server starts (catch-up)
  
+    # Contact Us form (landing page)
+    SUPPORT_EMAIL: str = ""                         # where contact messages are sent; empty = EMAIL_ADDRESS
+    CONTACT_MAX_PER_IP_PER_HOUR: int = 5            # spam protection: messages from one IP in one hour
+    CONTACT_MAX_PER_EMAIL_PER_HOUR: int = 3         # spam protection: messages from one email in one hour
+ 
     # Frontend pages served by this backend (clean URLs: /login, not login.html)
     FRONTEND_DIR: str = "../SmartIntern-fyp/internship-portal-frontend"   # folder that contains html, css, js, images
     FRONTEND_BASE_URL: str = "http://127.0.0.1:8000"                      # used for the links inside emails
@@ -30,4 +35,5 @@ class Settings(BaseSettings):
  
  
 settings = Settings()
+ 
  

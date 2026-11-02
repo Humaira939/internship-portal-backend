@@ -22,12 +22,14 @@ def _login_url() -> str:
     return _site_url("/login")
  
  
-def _send_email(to_email: str, subject: str, plain_body: str, html_body: str):
+def _send_email(to_email: str, subject: str, plain_body: str, html_body: str, reply_to: str = None):
     # "related" lets the HTML refer to an image that is attached inside the same email
     message = MIMEMultipart("related")
     message["From"] = formataddr(("SmartIntern", settings.EMAIL_ADDRESS))
     message["To"] = to_email
     message["Subject"] = subject
+    if reply_to:
+        message["Reply-To"] = reply_to      # pressing "Reply" answers this address
  
     # Plain-text and HTML versions of the same message
     alternative = MIMEMultipart("alternative")
@@ -411,4 +413,49 @@ def send_new_applicant_email(
         button_link=applicants_url,
     )
     _send_email(to_email, "SmartIntern - New applicant for " + internship_title, plain_body, html_body)
+ 
+ 
+# ======================================================================
+# CONTACT US (sent to the SmartIntern team when someone uses the contact form of the landing page)
+# ======================================================================
+def send_contact_message_email(
+    to_email: str,
+    message_id: int,
+    name: str,
+    email: str,
+    phone: str,
+    role: str,
+    topic: str,
+    message: str,
+):
+    from src.contact.validators import TOPICS
+ 
+    topic_label = TOPICS.get(topic, topic)
+ 
+    plain_body = (
+        f"New contact message #{message_id}\n\n"
+        f"Name: {name}\nEmail: {email}\nPhone: {phone or '-'}\nI am a: {role}\nTopic: {topic_label}\n\n"
+        f"Message:\n{message}\n\n"
+        "Press Reply to answer the sender."
+    )
+    html_message = escape(message).replace("\n", "<br>")
+    html_body = _html_wrapper(
+        title="New contact message",
+        message_lines=[
+            f"<b>Name:</b> {escape(name)}<br><b>Email:</b> {escape(email)}<br>"
+            f"<b>Phone:</b> {escape(phone) if phone else '-'}<br><b>I am a:</b> {escape(role)}<br>"
+            f"<b>Topic:</b> {escape(topic_label)}",
+            f"<b>Message:</b><br>{html_message}",
+            "Press <b>Reply</b> in your email app to answer the sender.",
+        ],
+    )
+    # The subject has no text typed by the visitor (safe), and Reply-To is the visitor's checked email
+    _send_email(
+        to_email,
+        f"SmartIntern contact #{message_id}: {topic_label}",
+        plain_body,
+        html_body,
+        reply_to=email,
+    )
+ 
  
