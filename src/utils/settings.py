@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     CONTACT_MAX_PER_IP_PER_HOUR: int = 5            # spam protection: messages from one IP in one hour
     CONTACT_MAX_PER_EMAIL_PER_HOUR: int = 3         # spam protection: messages from one email in one hour
  
+    # Rate limiting (the limits themselves are in src/rate_limit/rules.py)
+    RATE_LIMIT_ENABLED: bool = True                 # False = switched off (for example while testing)
+    RATE_LIMIT_TRUST_PROXY: bool = False            # True only behind a proxy you trust (reads X-Forwarded-For)
+ 
     # Frontend pages served by this backend (clean URLs: /login, not login.html)
     FRONTEND_DIR: str = "../SmartIntern-fyp/internship-portal-frontend"   # folder that contains html, css, js, images
     FRONTEND_BASE_URL: str = "http://127.0.0.1:8000"                      # used for the links inside emails
@@ -35,5 +39,4 @@ class Settings(BaseSettings):
  
  
 settings = Settings()
- 
  

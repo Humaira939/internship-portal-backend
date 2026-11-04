@@ -16,6 +16,19 @@ from fastapi.staticfiles import StaticFiles
 from src.pages.discovery import discover_pages, template_conflicts
 from src.utils.settings import settings
  
+class RevalidatingStaticFiles(StaticFiles):
+    """Static files (css, js, images) that the browser must re-check on every load.
+ 
+    Without this the browser may keep an old copy of a css/js file for a long time and a change made by the
+    frontend member does not show. With "no-cache" the browser still keeps the file, but asks the server
+    first (ETag); if the file did not change the answer is a tiny 304, if it changed the new file is sent."""
+ 
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+ 
+ 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]      # the folder that contains src/
 ASSET_FOLDERS = ("css", "js", "images")
  
@@ -51,9 +64,11 @@ def setup_frontend(app: FastAPI):
  
     def render(request: Request, filename: str):
         try:
-            return templates.TemplateResponse(request=request, name=filename)        # newer Starlette
+            response = templates.TemplateResponse(request=request, name=filename)        # newer Starlette
         except TypeError:
-            return templates.TemplateResponse(filename, {"request": request})       # older Starlette
+            response = templates.TemplateResponse(filename, {"request": request})       # older Starlette
+        response.headers["Cache-Control"] = "no-cache"      # a changed page shows on the next reload
+        return response
  
     router = APIRouter()
  
@@ -82,9 +97,8 @@ def setup_frontend(app: FastAPI):
     for asset in ASSET_FOLDERS:
         asset_dir = folder / asset
         if asset_dir.is_dir():
-            app.mount(f"/{asset}", StaticFiles(directory=str(asset_dir)), name=asset)
+            app.mount(f"/{asset}", RevalidatingStaticFiles(directory=str(asset_dir)), name=asset)
         else:
             print(f"[pages] Folder not found, skipped: {asset_dir}")
  
     print(f"[pages] {len(pages)} pages served from {folder}")
- 

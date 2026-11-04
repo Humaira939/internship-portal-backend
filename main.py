@@ -13,6 +13,7 @@ from src.internship.student_router import router as student_internship_router
 from src.application.router import router as application_router
 from src.contact.router import router as contact_router
 from src.pages.router import setup_frontend
+from src.rate_limit.middleware import RateLimitMiddleware
  
 # The license reminder table must be imported BEFORE create_all, so that it gets created too
 from src.license_expiry.model import LicenseReminderLog  # noqa: F401
@@ -35,6 +36,11 @@ async def lifespan(app: FastAPI):
  
  
 app = FastAPI(title="SmartIntern API", lifespan=lifespan)
+ 
+# Rate limiting: too many requests from one IP get 429.
+# It is added BEFORE the CORS middleware on purpose: the middleware added last is the outermost one,
+# so CORS stays outside and even a 429 answer carries the CORS headers (the browser can read it).
+app.add_middleware(RateLimitMiddleware)
  
 # Allow frontend to communicate with this backend
 app.add_middleware(
